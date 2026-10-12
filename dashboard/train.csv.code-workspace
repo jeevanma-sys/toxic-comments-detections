@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../../../train.csv"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {}
+}

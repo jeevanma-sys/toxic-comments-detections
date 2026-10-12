@@ -1,0 +1,16 @@
+pandas
+numpy
+scikit-learn
+joblib
+matplotlib
+seaborn
+fairlearn
+kafka-python
+streamlit
+google-api-python-client
+flask
+torch
+transformers
+lime
+beautifulsoup4
+requests

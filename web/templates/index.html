@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Real-Time Toxic Comment Detection — Fairness & Explainability</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">🎯</span>
+      <div>
+        <h1>Toxic Comment & Fairness Monitor</h1>
+        <span class="subbrand">Transformer-Powered &bull; LIME Explainable &bull; Multi-Source Live Stream</span>
+      </div>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="nav-tabs">
+      <button class="nav-tab active" data-tab="tab-stream">🔴 Live Monitor</button>
+      <button class="nav-tab" data-tab="tab-lime">🔬 LIME Explainability</button>
+      <button class="nav-tab" data-tab="tab-bias">⚖️ Bias & Fairness</button>
+    </nav>
+
+    <div class="system-pills">
+      <span class="pill pill-model" id="modelPill">🧠 Toxic-BERT</span>
+      <span class="pill pill-status" id="connectionPill">● Live</span>
+    </div>
+  </header>
+
+  <!-- ================= TAB 1: LIVE STREAM MONITOR ================= -->
+  <div id="tab-stream" class="tab-content active">
+    <!-- Stream Source & Configuration Bar -->
+    <div class="control-bar">
+      <!-- Source Selector -->
+      <div class="source-toggle">
+        <button class="source-btn active" data-source="youtube" id="srcYtBtn">
+          ▶ YouTube
+        </button>
+        <button class="source-btn" data-source="reddit" id="srcRedditBtn">
+          🤖 Reddit
+        </button>
+      </div>
+
+      <!-- Input Field -->
+      <div class="input-wrap">
+        <input type="text" id="targetInput" placeholder="Paste any YouTube video URL or ID (e.g. https://www.youtube.com/watch?v=kffacxfA7G4)...">
+      </div>
+
+      <!-- Model Selector -->
+      <div class="model-select-wrap">
+        <label for="modelSelect">Model:</label>
+        <select id="modelSelect">
+          <option value="transformer" selected>🧠 Transformer (Toxic-BERT)</option>
+          <option value="mitigated">⚡ TF-IDF Mitigated (BoW)</option>
+        </select>
+      </div>
+
+      <button id="goBtn" class="primary-btn">▶ Start Stream</button>
+      <span id="statusText" class="status-text"></span>
+    </div>
+
+    <!-- Main Live Dashboard Layout -->
+    <div class="layout">
+      <!-- Left Column: Source Media Player/Card + Fairness Live KPIs -->
+      <div class="left-panel">
+        
+        <!-- Media Container (YouTube iframe or Reddit Card) -->
+        <div id="youtubeContainer" class="media-container">
+          <div class="video-wrapper">
+            <iframe id="ytFrame" src="" frameborder="0" allowfullscreen></iframe>
+          </div>
+          <p class="watch-link" id="watchLink" style="display:none;">
+            <a id="watchLinkHref" href="#" target="_blank">▶ Watch directly on YouTube</a>
+          </p>
+        </div>
+
+        <div id="redditContainer" class="media-container" style="display:none;">
+          <div class="reddit-card">
+            <div class="reddit-header">
+              <span class="reddit-badge">r/<span id="redditSub">technology</span></span>
+              <span class="reddit-live-tag">● Live Ingestion</span>
+            </div>
+            <h3 id="redditTitle" class="reddit-title">Live Reddit Feed</h3>
+            <p id="redditAuthor" class="reddit-meta">Posted by u/RedditUser</p>
+            <div class="reddit-stats">
+              <span>💬 Subreddit Stream</span>
+              <span>⚡ Context-Aware Scoring</span>
+            </div>
+            <a id="redditLink" href="#" target="_blank" class="reddit-btn">↗ View on Reddit</a>
+          </div>
+        </div>
+
+        <!-- Video / Target Info Card -->
+        <div class="card" id="sourceInfoCard" style="display:none;">
+          <h2 id="sourceTitle"></h2>
+          <p class="source-sub" id="sourceSub"></p>
+        </div>
+
+        <!-- Live Fairness & Identity Tracker Card -->
+        <div class="card">
+          <div class="card-header">
+            <h2>📊 Live Fairness & Toxicity Summary</h2>
+            <span class="card-tag">Real-Time Metrics</span>
+          </div>
+
+          <div class="metrics">
+            <div class="metric">
+              <span class="metric-value" id="totalCount">0</span>
+              <span class="metric-label">Total Scored</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="toxicityRate">0%</span>
+              <span class="metric-label">Toxicity Rate</span>
+            </div>
+            <div class="metric">
+              <span class="metric-value" id="identityCount">0</span>
+              <span class="metric-label">Identity Mentions</span>
+            </div>
+          </div>
+
+          <h3>Toxicity Rate by Identity Group</h3>
+          <div id="identityChart" class="identity-chart">
+            <p class="empty-state">No identity-tagged comments yet.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Live Comment Stream -->
+      <div class="right-panel">
+        <div class="panel-header">
+          <h2>💬 Live Comment Feed</h2>
+          <div id="commentCount" class="comment-count">0 comments</div>
+        </div>
+
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="toxic">🔴 Toxic Only</button>
+          <button class="filter-btn" data-filter="clean">🟢 Clean Only</button>
+        </div>
+
+        <div id="commentFeed" class="comment-feed">
+          <p class="empty-state">Select a source and click "Start Stream" to monitor comments in real-time.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 2: LIME EXPLAINABILITY PANEL ================= -->
+  <div id="tab-lime" class="tab-content">
+    <div class="content-container">
+      <div class="section-hero">
+        <h2>🔬 LIME Explainability Panel</h2>
+        <p>
+          Local Interpretable Model-agnostic Explanations (LIME) per-token attribution.
+          See exactly which words drive the classification towards <strong>Toxic</strong> (red) or <strong>Non-Toxic</strong> (green).
+        </p>
+      </div>
+
+      <div class="lime-grid">
+        <!-- Interactive Analysis Input Card -->
+        <div class="card lime-input-card">
+          <h3>Test Any Comment</h3>
+          <p class="sub-text">Type any sentence or click one of the context-aware test cases below:</p>
+
+          <textarea id="limeTextInput" rows="4" placeholder="Enter a comment to explain with LIME... (e.g. 'I am a proud gay woman', 'You are not an idiot')"></textarea>
+
+          <div class="preset-chips">
+            <span class="chip-label">Presets:</span>
+            <button class="preset-btn" data-text="I am a proud gay woman and I love my community">🏳️‍🌈 Benign Identity</button>
+            <button class="preset-btn" data-text="You are not an idiot, you did an amazing job!">💡 Negation Context</button>
+            <button class="preset-btn" data-text="The kill streak in this video game was incredible">🎮 Gaming Slang</button>
+            <button class="preset-btn" data-text="You are an absolute idiot and nobody likes you">⚠️ Toxic Insult</button>
+            <button class="preset-btn" data-text="As a Muslim, peace and tolerance are core to my faith">🕊️ Religious Context</button>
+          </div>
+
+          <div class="lime-controls">
+            <div class="model-select-inline">
+              <label>Model to Explain:</label>
+              <select id="limeModelSelect">
+                <option value="transformer" selected>🧠 Transformer (Toxic-BERT)</option>
+                <option value="mitigated">⚡ TF-IDF Mitigated (BoW)</option>
+              </select>
+            </div>
+            <button id="runLimeBtn" class="primary-btn">🔬 Run LIME Explanation</button>
+          </div>
+        </div>
+
+        <!-- LIME Explanation Results Card -->
+        <div class="card lime-result-card" id="limeResultCard">
+          <div id="limePlaceholder" class="empty-state">
+            Click <strong>"Run LIME Explanation"</strong> or choose a preset to inspect token-level weights.
+          </div>
+
+          <div id="limeOutput" style="display:none;">
+            <!-- Prediction Banner -->
+            <div class="prediction-banner" id="predictionBanner">
+              <div class="banner-top">
+                <span class="pred-label" id="predLabel">TOXIC</span>
+                <span class="pred-prob" id="predProb">98.5% Probability</span>
+              </div>
+              <div class="prob-bar-bg">
+                <div class="prob-bar-fill" id="probBarFill"></div>
+              </div>
+            </div>
+
+            <!-- Token Heatmap View -->
+            <div class="token-heatmap-wrap">
+              <h4>Highlighted Token Heatmap</h4>
+              <p class="sub-text">Hover over tokens to inspect individual attribution weights:</p>
+              <div class="token-heatmap-box" id="tokenHeatmap"></div>
+            </div>
+
+            <!-- Feature Importance Bar Chart -->
+            <div class="feature-chart-wrap">
+              <h4>Top Contributing Word Features</h4>
+              <div class="feature-chart" id="featureChart"></div>
+            </div>
+
+            <!-- Context-Awareness Commentary -->
+            <div class="context-insight-box" id="contextInsightBox">
+              <h4>🧠 Context-Aware AI Insight</h4>
+              <p id="contextInsightText"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 3: BIAS & FAIRNESS DASHBOARD ================= -->
+  <div id="tab-bias" class="tab-content">
+    <div class="content-container">
+      <div class="section-hero">
+        <h2>⚖️ Bias & Fairness Dashboard</h2>
+        <p>
+          Benchmarking unintended bias and false-alarm disparity across protected identity groups.
+          Mitigation via sample reweighing and threshold post-processing flattens unequal false positive rates.
+        </p>
+      </div>
+
+      <!-- KPI Metrics Overview -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <span class="kpi-label">Mean BPSN AUC Gain</span>
+          <span class="kpi-value" id="kpiBpsnGain">+3.8%</span>
+          <span class="kpi-sub">Higher BPSN = fewer false alarms on identity terms</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">FPR Disparity Reduction</span>
+          <span class="kpi-value" id="kpiDisparityRed">57.3%</span>
+          <span class="kpi-sub">Equalized false alarm rates across groups</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Baseline Disparity Spread</span>
+          <span class="kpi-value" id="kpiBaseDisparity">45.4%</span>
+          <span class="kpi-sub">Spread between worst and best identity groups</span>
+        </div>
+        <div class="kpi-card">
+          <span class="kpi-label">Post-Proc Disparity Spread</span>
+          <span class="kpi-value highlight-green" id="kpiPostDisparity">19.4%</span>
+          <span class="kpi-sub">Dramatic parity improvement after post-processing</span>
+        </div>
+      </div>
+
+      <!-- Visual Charts Section -->
+      <div class="bias-charts-grid">
+        <!-- BPSN AUC Chart (Before vs After) -->
+        <div class="card">
+          <h3>BPSN AUC by Identity Group (Baseline vs Mitigated)</h3>
+          <p class="sub-text">Background Positive, Subgroup Negative: Evaluates false positives on benign identity mentions.</p>
+          <div id="bpsnChart" class="bias-chart-container"></div>
+        </div>
+
+        <!-- False Positive Rate (FPR) Parity Chart -->
+        <div class="card">
+          <h3>False Positive Rate (FPR) Comparison across Groups (%)</h3>
+          <p class="sub-text">Compares baseline unmitigated FPR vs reweighed and post-processed FPR.</p>
+          <div id="fprChart" class="bias-chart-container"></div>
+        </div>
+      </div>
+
+      <!-- Complete Tabular Metrics Breakdown -->
+      <div class="card table-card">
+        <h3>Complete Group Fairness Evaluation Table</h3>
+        <div class="table-responsive">
+          <table class="fairness-table" id="fairnessTable">
+            <thead>
+              <tr>
+                <th>Identity Group</th>
+                <th>Subgroup AUC (Base)</th>
+                <th>Subgroup AUC (Mit)</th>
+                <th>BPSN AUC (Base)</th>
+                <th>BPSN AUC (Mit)</th>
+                <th>FPR Baseline</th>
+                <th>FPR Mitigated</th>
+                <th>FPR Post-Proc</th>
+                <th>FPR Parity Delta</th>
+              </tr>
+            </thead>
+            <tbody id="fairnessTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Fairness Concepts Guide -->
+      <div class="card guide-card">
+        <h3>📖 Fairness Metrics Glossary</h3>
+        <div class="glossary-grid">
+          <div class="glossary-item">
+            <strong>Subgroup AUC</strong>
+            <p>Measures discrimination ability strictly within comments that mention a sensitive identity.</p>
+          </div>
+          <div class="glossary-item">
+            <strong>BPSN AUC (Background Positive, Subgroup Negative)</strong>
+            <p>Measures whether non-toxic comments mentioning the identity are falsely flagged as toxic. Higher BPSN means identity words are not penalized.</p>
+          </div>
+          <div class="glossary-item">
+            <strong>BNSP AUC (Background Negative, Subgroup Positive)</strong>
+            <p>Measures whether toxic comments mentioning the identity are appropriately detected.</p>
+          </div>
+          <div class="glossary-item">
+            <strong>Equalized Odds / FPR Parity</strong>
+            <p>Ensures that innocent comments from every demographic group have an equal probability of remaining unflagged.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick LIME Modal (Triggered by "Explain" button in Live Stream) -->
+  <div id="limeModal" class="modal-backdrop" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>🔬 LIME Explainability Breakdown</h3>
+        <button id="closeModalBtn" class="close-btn">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <div class="spinner"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
